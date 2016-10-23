@@ -1,0 +1,298 @@
+//
+//  main.cpp
+//  jincheng
+//
+//  Created by LG on 2016/10/14.
+//  Copyright © 2016年 LG. All rights reserved.
+//
+
+#include <iostream>
+#include <string>
+#include <queue>
+#include <ctime>
+#include <cstring>
+#include <time.h>
+using namespace std;
+
+const int NAMELENGTH = 9;
+int ROUND_prior=100;
+int ROUND;
+int m;//进程个数
+int u=0;
+int t=0;
+
+struct pcb
+{
+    char name[NAMELENGTH]; //进程名字
+    int prior; //优先数
+    int round; //进程轮转时间片场
+    int cputime; //进程已经占用的CPU时间
+    int needtime; //进程还需要的CPU时间
+    char state[10];  //进程状态
+};
+
+int Initpcb (pcb data[m])
+{
+    for(int k=0;k<m;k++)
+    {
+        data[k].prior=-1;
+    }
+    return 0;
+}
+
+//typedef struct Lnode
+//{
+  //  pcb data;
+    //struct Lnode *next;
+//}Lnode;
+
+//typedef Lnode Qnode;
+typedef struct LinkQueue
+{
+    pcb data;
+    struct LinkQueue *front;
+    struct LinkQueue *rear;
+}LinkQueue;
+
+LinkQueue InitQueue_link(LinkQueue queue)
+{//初始化队列
+    //LinkQueue *queue=NULL;
+    queue=*(LinkQueue*)malloc(sizeof(LinkQueue));
+    queue.front=&queue;
+    queue.rear=NULL;
+    return queue;
+}
+
+int QueueEmpty_link(LinkQueue queue)
+{//判断链队列是否为空
+    if(queue.front==queue.rear)
+        return -1;
+    return 0;
+}
+
+int EnQueue_link(LinkQueue queue,pcb e)
+{//入队列操作
+    LinkQueue *p;
+    p=(LinkQueue*)malloc(sizeof(LinkQueue));
+    if(NULL==p)
+        return -1;
+    p->data=e;
+    p->rear=NULL;
+    //queue.front=p;
+    queue.rear=p;
+
+    return 0;
+}
+
+int DeQueue_link(LinkQueue queue,pcb *e)
+{//出队列
+    LinkQueue*p=NULL;
+    if(QueueEmpty_link(queue))
+        return -1;
+    p=queue.front;
+    *e=p->data;
+    queue.rear=p->rear;
+    free(p);
+    return 0;
+}
+
+void show(pcb jincheng[m])
+{
+    for(int h=0;h<m;h++)
+    {
+        if(jincheng[h].prior!=-1)
+        {
+            printf("第%d个进程的各参数为",h+1);
+            printf("进程名");
+            printf("  进程优先数");
+            printf("  进程的轮转时间片");
+            printf("  进程已占用的CPU时间片");
+            printf("  进程还需要的CPU时间片");
+            printf("  进程状态");
+            printf("\n");
+            printf("%s",jincheng[h].name);
+            printf("  %d",jincheng[h].prior);
+            printf("  %d",jincheng[h].round);
+            printf("  %d",jincheng[h].cputime);
+            printf("  %d",jincheng[h].needtime);
+            printf("  %s",jincheng[h].state);
+            printf("\n");
+            printf("\n");
+        }
+    }
+}
+
+
+void run_prior(pcb jincheng[m],pcb jinc_low[u],pcb finish[t])
+{//优先数算法运算
+
+    for(int h=0;h<m;h++)
+    {
+        if(jincheng[h].needtime<=ROUND_prior)
+        {
+            jincheng[h].cputime=jincheng[h].cputime+jincheng[h].needtime;
+            jincheng[h].needtime=0;
+            strcpy(jincheng[h].state,"finish");
+            finish[t]=jincheng[h];
+            //if(t==0)
+              //  hnode.rear=&finish[t];
+            if(t>0)
+                finish[t]=finish[t-1];
+            t++;
+        }
+        else
+        {
+            jincheng[h].cputime=jincheng[h].cputime+ROUND_prior;
+            jincheng[h].needtime=jincheng[h].needtime-ROUND_prior;
+            strcpy(jinc_low[u].state,"ready");
+            jinc_low[u]=jincheng[h];
+            u++;
+        }
+    }
+    if(u!=0)
+    {
+        printf("未完成的进程：\n");
+        show(jinc_low);
+    }
+    if(t!=0)
+    {
+        printf("已完成的进程：\n");
+        show(finish);
+    }
+    //return (jinc_low[m],finish[m]);
+}
+
+void runcycle (pcb jinc_low[m],pcb finish[m],int u,int t)
+{
+    int needt = 0;
+    pcb temp;
+    u=u-1;
+    for (int k=0; k<=u; k++)
+    {
+        needt=needt+jinc_low[k].needtime;
+    }
+    do{
+        if(jinc_low[0].needtime>ROUND)
+        {
+            //u=u-1;
+            needt=needt-ROUND;
+            jinc_low[0].needtime=jinc_low[0].needtime-ROUND;
+            jinc_low[0].cputime=jinc_low[0].cputime+ROUND;
+            temp=jinc_low[0];
+            if(u>=0)
+            {
+            if(u>0)
+            {
+                for (int o=0; o<u; o++)
+                {
+                    jinc_low[o]=jinc_low[o+1];
+                }
+            }
+            jinc_low[u]=temp;
+            }
+        }
+        else
+        {
+            needt=needt-jinc_low[0].needtime;
+            jinc_low[0].cputime=jinc_low[0].cputime+jinc_low[0].needtime;
+            jinc_low[0].needtime=0;
+            strcpy(jinc_low[0].state, "finish");
+            finish[t]=jinc_low[0];
+            t=t+1;
+            for(int m=0;m<u;m++)
+            {
+                jinc_low[m]=jinc_low[m+1];
+            }
+            jinc_low[u].needtime=0;
+            jinc_low[u].prior=-1;
+            u=u-1;
+        }
+        printf("未完成的进程:\n");
+        show(jinc_low);
+        printf("已完成的进程:\n");
+        show(finish);
+    }while(needt>0);
+}
+
+void Listen(pcb jincheng[m],pcb jinc_low[u],pcb finish[t])
+{
+    int ii,rand_time;
+    srand((unsigned)time(NULL));
+    for(int h=0;h<m;h++)
+    {
+        ii=rand()%10;
+        if(ii<3)
+        {
+            rand_time=rand()%100;
+            if(jincheng[h].needtime<=rand_time)
+            {
+                jincheng[h].cputime=jincheng[h].cputime+jincheng[h].needtime;
+                jincheng[h].needtime=0;
+                strcpy(jincheng[h].state,"finish");
+                finish[t]=jincheng[h];
+                if(t>0)
+                    finish[t]=finish[t-1];
+                t++;
+            }
+            else
+            {
+                jincheng[h].cputime=jincheng[h].cputime+rand_time;
+                jincheng[h].needtime-=rand_time;
+                
+            }
+        }
+    }
+}
+
+int main()
+{
+    cout<<"请输入要创建的进程个数：\n";
+    cin>>m;
+    printf("高优先数队列时间片默认为100ms");
+    printf("将循环轮转CPU时间片置为：\n");
+    cin>>ROUND;
+    pcb jincheng[m];
+    LinkQueue hnode;
+    LinkQueue lnode;
+    InitQueue_link(hnode);
+    InitQueue_link(lnode);
+    pcb finish[m];
+    pcb jinc_low[m];
+    Initpcb(finish);
+    Initpcb(jinc_low);
+    for(int k=0;k<m;k++)
+    {
+        printf("请输入第%d个进程的名字(请输入小于9个字符)：\n",k+1);
+        cin>>jincheng[k].name;
+        do{
+        printf("请输入第%d个进程的优先级（0~9）：\n",k+1);
+        cin>>jincheng[k].prior;
+            if (jincheng[k].prior<0||jincheng[k].prior>9) {
+                printf("输入的进程优先级有误，请重新输入\n");
+            }
+        }while(jincheng[k].prior<0||jincheng[k].prior>9);
+            printf("请输入第%d个进程的轮转时间片：\n",k+1);
+            cin>>jincheng[k].round;
+            printf("请输入第%d个进程已经占用的CPU时间：\n",k+1);
+            cin>>jincheng[k].cputime;
+        jincheng[k].needtime=jincheng[k].round-jincheng[k].cputime;
+        strcpy(jincheng[k].state,"ready");
+        pcb temp;
+        if(k==0)
+            ;
+        else if(jincheng[k].prior>jincheng[k-1].prior)
+        {
+            temp=jincheng[k-1];
+            jincheng[k-1]=jincheng[k];
+            jincheng[k]=temp;
+        }
+        printf("\n");
+        //EnQueue_link(hqueue,jincheng[k]);
+    }
+    printf("使用优先数运行：\n");
+    show(jincheng);
+    run_prior(jincheng,jinc_low,finish);
+    printf("使用循环轮转运行：\n");
+    runcycle(jinc_low, finish, u, t);
+    return 0;
+}
